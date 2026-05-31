@@ -929,14 +929,28 @@ function switchTab(tab) {
 }
  
 // ── RENDER ROUTES ──
+// 判斷一筆航線資料是否有效（有起訖地與必要日期）
+function isValidRoute(r) {
+  if (!r || !r.origin || !r.dest) return false;
+  if (r.type === 'multi_city') return Array.isArray(r.legs) && r.legs.length > 0;
+  return Array.isArray(r.depart_range) && r.depart_range[0];
+}
+ 
 function renderRoutes() {
   const el = document.getElementById('route-list');
   const addBtn = document.getElementById('add-btn');
   const limitNote = document.getElementById('limit-note');
-  const atLimit = routes.length >= MAX_ROUTES;
  
-  addBtn.disabled = atLimit;
-  limitNote.textContent = atLimit ? `已達上限（最多 ${MAX_ROUTES} 條航線）` : '';
+  // 先清掉壞掉的空資料（避免算進上限、或讓畫面崩潰）
+  const cleaned = routes.filter(isValidRoute);
+  if (cleaned.length !== routes.length) {
+    routes = cleaned;
+    saveRoutes(); // 同步乾淨的清單回本機與雲端
+  }
+ 
+  const atLimit = routes.length >= MAX_ROUTES;
+  addBtn.style.opacity = atLimit ? '0.5' : '1';
+  limitNote.textContent = atLimit ? `已達上限（最多 ${MAX_ROUTES} 條航線），可先刪除一條再新增` : '';
  
   if (routes.length === 0) {
     el.innerHTML = `<div class="empty-state">
@@ -948,24 +962,24 @@ function renderRoutes() {
   }
  
   el.innerHTML = routes.map((r, i) => {
-    const diff = r.current_price - r.prev_price;
+    const diff = (r.current_price||0) - (r.prev_price||0);
     const pct = r.prev_price ? ((diff/r.prev_price)*100).toFixed(1) : 0;
     const cls = diff > 0 ? 'up' : diff < 0 ? 'down' : 'flat';
     const arrow = diff > 0 ? '▲' : diff < 0 ? '▼' : '—';
     const pctStr = diff !== 0 ? `${arrow} ${Math.abs(pct)}%` : '—';
-    const typeLabel = {round_trip:'來回', multi_city:'多點', one_way:'單程'}[r.type];
+    const typeLabel = {round_trip:'來回', multi_city:'多點', one_way:'單程'}[r.type] || '單程';
     const showAlert = diff > 0 && Math.abs(pct) >= 10;
  
     let datesHtml = '';
     if (r.type === 'multi_city') {
       datesHtml = `<span>多段行程</span>`;
-    } else {
-      const d1 = r.depart_range[0].slice(5).replace('-','/');
-      const d2 = r.depart_range[1].slice(5).replace('-','/');
+    } else if (Array.isArray(r.depart_range) && r.depart_range[0]) {
+      const d1 = (r.depart_range[0]||'').slice(5).replace('-','/');
+      const d2 = (r.depart_range[1]||'').slice(5).replace('-','/');
       datesHtml = `出發 <span>${d1}—${d2}</span>`;
-      if (r.return_range) {
-        const r1 = r.return_range[0].slice(5).replace('-','/');
-        const r2 = r.return_range[1].slice(5).replace('-','/');
+      if (r.return_range && r.return_range[0]) {
+        const r1 = (r.return_range[0]||'').slice(5).replace('-','/');
+        const r2 = (r.return_range[1]||'').slice(5).replace('-','/');
         datesHtml += ` ｜ 回程 <span>${r1}—${r2}</span>`;
       }
     }
@@ -981,7 +995,7 @@ function renderRoutes() {
           <div class="airport-code">${r.dest}</div>
         </div>
         <div class="route-price-area">
-          <div class="current-price">NT$ ${r.current_price.toLocaleString()}</div>
+          <div class="current-price">NT$ ${(r.current_price||0).toLocaleString()}</div>
           <div class="price-change ${cls}">${pctStr}</div>
         </div>
       </div>
@@ -1730,19 +1744,22 @@ async function loadRoutesFromCloud() {
       body: JSON.stringify({ action: 'get_routes' }),
     });
     const data = await resp.json();
-    if (data.ok && Array.isArray(data.routes) && data.routes.length > 0) {
-      // 只有內容真的不同才更新畫面（避免無謂重繪）
-      const changed = JSON.stringify(data.routes) !== JSON.stringify(routes);
-      if (changed) {
-        routes = data.routes;
-        usingDemoData = false;
-        localStorage.setItem(KEY, JSON.stringify(routes));
-        renderRoutes();
-        if (document.getElementById('page-chart').classList.contains('active')) renderChart();
+    if (data.ok && Array.isArray(data.routes)) {
+      // 過濾掉雲端可能殘留的壞資料
+      const cloudRoutes = data.routes.filter(isValidRoute);
+      if (cloudRoutes.length > 0) {
+        const changed = JSON.stringify(cloudRoutes) !== JSON.stringify(routes);
+        if (changed) {
+          routes = cloudRoutes;
+          usingDemoData = false;
+          localStorage.setItem(KEY, JSON.stringify(routes));
+          renderRoutes();
+          if (document.getElementById('page-chart').classList.contains('active')) renderChart();
+        }
+      } else if (routes.length > 0 && !usingDemoData) {
+        // 雲端沒有有效資料，但本機有 → 把本機的推上去
+        syncRoutesToCloud();
       }
-    } else if (data.ok && data.routes.length === 0 && routes.length > 0 && !usingDemoData) {
-      // 雲端是空的，但本機有真實資料 → 把本機的推上去（首次同步）
-      syncRoutesToCloud();
     }
   } catch (e) {
     console.warn('從雲端載入清單失敗，改用本機資料', e);
@@ -1759,3 +1776,4 @@ loadRoutesFromCloud();
 </script>
 </body>
 </html>
+ 
