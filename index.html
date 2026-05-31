@@ -915,7 +915,8 @@ function getDemoRoutes() {
   ];
 }
  
-if (routes.length === 0) routes = getDemoRoutes();
+let usingDemoData = false;
+if (routes.length === 0) { routes = getDemoRoutes(); usingDemoData = true; }
  
 // ── TABS ──
 function switchTab(tab) {
@@ -1526,6 +1527,8 @@ function submitRoute() {
     }
     routes[editingIndex] = nr;
   } else {
+    // 若目前還是示範資料，使用者新增第一條真實航線時先清掉示範
+    if (usingDemoData) { routes = []; usingDemoData = false; }
     routes.push(nr);
   }
  
@@ -1552,21 +1555,13 @@ function saveRoutes() {
   syncRoutesToCloud(); // 同步一份到雲端 KV，讓自動查價/通知讀得到
 }
  
-// 把追蹤清單同步到 Worker 的 KV（精簡版，只送自動查價需要的欄位）
+// 把完整追蹤清單同步到 Worker 的 KV（含價格與歷史，跨裝置同步）
 async function syncRoutesToCloud() {
   try {
-    const slim = routes.map(r => ({
-      type: r.type,
-      origin: r.origin,
-      dest: r.dest,
-      depart_range: r.depart_range || null,
-      return_range: r.return_range || null,
-      threshold: r.threshold || null,
-    }));
     await fetch(WORKER_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'sync_routes', routes: slim }),
+      body: JSON.stringify({ action: 'sync_routes', routes: routes }),
     });
   } catch (e) {
     console.warn('同步清單到雲端失敗（不影響本機使用）', e);
@@ -1723,7 +1718,33 @@ resetForm = function() {
  
 renderRoutes();
 renderSettings();
+ 
+// 打開 App 時，從雲端拉最新清單（雲端為主，跨裝置同步）
+async function loadRoutesFromCloud() {
+  try {
+    const resp = await fetch(WORKER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'get_routes' }),
+    });
+    const data = await resp.json();
+    if (data.ok && Array.isArray(data.routes) && data.routes.length > 0) {
+      // 雲端有資料 → 以雲端為準
+      routes = data.routes;
+      localStorage.setItem(KEY, JSON.stringify(routes));
+      renderRoutes();
+      // 如果正在看走勢圖，也刷新
+      if (document.getElementById('page-chart').classList.contains('active')) renderChart();
+    } else if (data.ok && data.routes.length === 0 && routes.length > 0 && !usingDemoData) {
+      // 雲端是空的，但本機有真實資料 → 把本機的推上去（首次同步）
+      syncRoutesToCloud();
+    }
+  } catch (e) {
+    console.warn('從雲端載入清單失敗，改用本機資料', e);
+  }
+}
+ 
+loadRoutesFromCloud();
 </script>
 </body>
 </html>
- 
