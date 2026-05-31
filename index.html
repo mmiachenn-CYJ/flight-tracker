@@ -639,6 +639,13 @@ body {
       <div class="settings-value" id="conn-status" style="color:var(--accent)">點此測試 ›</div>
     </div>
     <div id="conn-detail" style="display:none;padding:12px 16px;border-top:1px solid var(--sand);font-size:12px;line-height:1.7;color:var(--text2)"></div>
+    <div class="settings-row" onclick="sendTestEmail()" style="cursor:pointer">
+      <div>
+        <div class="settings-label">寄測試信</div>
+        <div class="settings-sub">寄一封測試信到通知信箱</div>
+      </div>
+      <div class="settings-value" id="testmail-status" style="color:var(--accent)">點此寄送 ›</div>
+    </div>
   </div>
  
   <div class="sec-label">關於</div>
@@ -806,16 +813,24 @@ async function testConnection() {
     if (data.pong) {
       const serpOK = data.has_serpapi;
       const aiOK = data.has_anthropic;
-      const allOK = serpOK && aiOK;
-      status.textContent = allOK ? '✓ 正常' : '⚠ 有問題';
+      const resendOK = data.has_resend;
+      const kvOK = data.has_kv;
+      const emailOK = data.notify_email_set;
+      const allOK = serpOK && aiOK && resendOK && kvOK && emailOK;
+      const row = (label, ok, hint) =>
+        `<div>${label}：${ok ? '<span style="color:var(--green)">✓ 已設定</span>' : '<span style="color:var(--red)">✗ ' + hint + '</span>'}</div>`;
+      status.textContent = allOK ? '✓ 全部正常' : '⚠ 部分未設定';
       status.style.color = allOK ? 'var(--green)' : 'var(--red)';
       detail.style.display = 'block';
       detail.innerHTML =
         `<div>① 後端 Worker：<span style="color:var(--green)">✓ 連線成功</span></div>` +
-        `<div>② SerpApi 金鑰：${serpOK ? '<span style="color:var(--green)">✓ 已設定</span>' : '<span style="color:var(--red)">✗ 未設定（請到 Cloudflare 環境變數新增 SERPAPI_KEY）</span>'}</div>` +
-        `<div>③ Anthropic 金鑰：${aiOK ? '<span style="color:var(--green)">✓ 已設定</span>' : '<span style="color:var(--red)">✗ 未設定（請到 Cloudflare 環境變數新增 ANTHROPIC_KEY）</span>'}</div>` +
-        (allOK ? `<div style="margin-top:6px;color:var(--green)">全部正常，可以正常查價與 AI 分析了！</div>`
-               : `<div style="margin-top:6px;color:var(--red)">請補上缺少的金鑰後重新部署 Worker。</div>`);
+        row('② SerpApi 金鑰', serpOK, '未設定 SERPAPI_KEY') +
+        row('③ Anthropic 金鑰', aiOK, '未設定 ANTHROPIC_KEY') +
+        row('④ Resend 金鑰', resendOK, '未設定 RESEND_KEY') +
+        row('⑤ 通知信箱', emailOK, '未設定 NOTIFY_EMAIL') +
+        row('⑥ KV 資料庫', kvOK, '未綁定 FLIGHT_KV') +
+        (allOK ? `<div style="margin-top:6px;color:var(--green)">全部就緒！查價、AI 分析、Email 通知都能運作。</div>`
+               : `<div style="margin-top:6px;color:var(--red)">請補上缺少的項目並重新部署 Worker。</div>`);
     } else {
       status.textContent = '⚠ 異常';
       status.style.color = 'var(--red)';
@@ -832,6 +847,34 @@ async function testConnection() {
       `<div>• Worker 網址錯誤或尚未部署</div>` +
       `<div>• Worker 程式碼沒有完整貼上並部署</div>` +
       `<div>目前設定的網址：<br><span style="font-family:monospace;word-break:break-all">${WORKER_URL}</span></div>`;
+  }
+}
+ 
+// 寄測試信
+async function sendTestEmail() {
+  const status = document.getElementById('testmail-status');
+  status.textContent = '寄送中…';
+  status.style.color = 'var(--text3)';
+  try {
+    const resp = await fetch(WORKER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'test_email' }),
+    });
+    const data = await resp.json();
+    if (data.ok) {
+      status.textContent = '✓ 已寄出';
+      status.style.color = 'var(--green)';
+      showToast('測試信已寄出，請查看信箱（含垃圾信匣）');
+    } else {
+      status.textContent = '✗ 失敗';
+      status.style.color = 'var(--red)';
+      showToast('寄信失敗：' + (data.error || '未知原因'));
+    }
+  } catch (e) {
+    status.textContent = '✗ 連不上';
+    status.style.color = 'var(--red)';
+    showToast('連線失敗：' + (e.message || e));
   }
 }
  
@@ -1244,6 +1287,23 @@ async function loadAIAnalysis(r, history) {
     return;
   }
  
+  // ── 快取：同航線 6 小時內、且最新票價沒變，就直接用上次結果（省 Claude 額度）──
+  const CACHE_HOURS = 6;
+  const latestPrice = valid[valid.length - 1];
+  if (r.ai_cache &&
+      r.ai_cache.period === currentPeriod &&
+      r.ai_cache.latest_price === latestPrice &&
+      (Date.now() - r.ai_cache.at) < CACHE_HOURS * 3600000) {
+    const c = r.ai_cache;
+    aiTextEl.textContent = c.summary + '　(快取)';
+    verdictEl.style.display = 'inline-flex';
+    const icon = c.verdict === 'buy_now' ? '🔺' : c.verdict === 'wait' ? '⏳' : '•';
+    verdictEl.textContent = `${icon} ${c.verdict_text || ''}`;
+    verdictEl.style.background = c.verdict === 'buy_now' ? 'var(--red-light)' : 'white';
+    verdictEl.style.color = c.verdict === 'buy_now' ? 'var(--red)' : 'var(--blue)';
+    return;
+  }
+ 
   // 計算距離出發天數
   let daysUntil = null;
   if (r.depart_range && r.depart_range[0]) {
@@ -1273,6 +1333,16 @@ async function loadAIAnalysis(r, history) {
       verdictEl.textContent = `${icon} ${data.verdict_text || ''}`;
       verdictEl.style.background = data.verdict === 'buy_now' ? 'var(--red-light)' : 'white';
       verdictEl.style.color = data.verdict === 'buy_now' ? 'var(--red)' : 'var(--blue)';
+      // 存快取，6 小時內同條件不再重複呼叫
+      r.ai_cache = {
+        period: currentPeriod,
+        latest_price: latestPrice,
+        at: Date.now(),
+        summary: data.summary,
+        verdict: data.verdict,
+        verdict_text: data.verdict_text,
+      };
+      saveRoutes();
     } else {
       // 顯示 Worker 傳回的真實錯誤原因，方便診斷
       const reason = data.error || '未知原因';
@@ -1383,7 +1453,31 @@ function editRoute(idx, e) {
   showToast('編輯功能即將推出');
 }
  
-function saveRoutes() { localStorage.setItem(KEY, JSON.stringify(routes)); }
+function saveRoutes() {
+  localStorage.setItem(KEY, JSON.stringify(routes));
+  syncRoutesToCloud(); // 同步一份到雲端 KV，讓自動查價/通知讀得到
+}
+ 
+// 把追蹤清單同步到 Worker 的 KV（精簡版，只送自動查價需要的欄位）
+async function syncRoutesToCloud() {
+  try {
+    const slim = routes.map(r => ({
+      type: r.type,
+      origin: r.origin,
+      dest: r.dest,
+      depart_range: r.depart_range || null,
+      return_range: r.return_range || null,
+      threshold: r.threshold || null,
+    }));
+    await fetch(WORKER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'sync_routes', routes: slim }),
+    });
+  } catch (e) {
+    console.warn('同步清單到雲端失敗（不影響本機使用）', e);
+  }
+}
  
 function showToast(msg) {
   const t = document.getElementById('toast');
