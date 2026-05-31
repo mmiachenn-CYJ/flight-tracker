@@ -1,0 +1,1404 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Flight Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --cream: #faf8f4;
+  --warm-white: #fff9f2;
+  --sand: #f0ebe1;
+  --sand2: #e8e0d2;
+  --border: #ddd7cc;
+  --text: #2a2520;
+  --text2: #6b6059;
+  --text3: #a89d94;
+  --accent: #c17b3a;
+  --accent-light: #f5e8d8;
+  --red: #c0392b;
+  --red-light: #fdecea;
+  --green: #27794a;
+  --green-light: #e8f5ee;
+  --blue: #2563a8;
+  --blue-light: #e8f0fb;
+  --card: #ffffff;
+  --shadow: 0 2px 12px rgba(60,40,20,0.08);
+  --shadow-hover: 0 6px 24px rgba(60,40,20,0.14);
+  --radius: 16px;
+  --radius-sm: 10px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--cream);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  min-height: 100vh;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+/* ── HEADER ── */
+.header {
+  background: var(--warm-white);
+  border-bottom: 1px solid var(--border);
+  padding: 20px 20px 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.header-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.logo-block {}
+.logo {
+  font-family: 'DM Serif Display', serif;
+  font-size: 22px;
+  color: var(--text);
+  letter-spacing: -0.3px;
+  line-height: 1.1;
+}
+.logo span { color: var(--accent); font-style: italic; }
+.slogan {
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 3px;
+  letter-spacing: 0.3px;
+  font-style: italic;
+}
+.header-badge {
+  font-size: 11px;
+  background: var(--accent-light);
+  color: var(--accent);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  margin-top: 2px;
+}
+
+/* ── TABS ── */
+.tabs { display: flex; }
+.tab {
+  flex: 1;
+  text-align: center;
+  padding: 10px 0 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text3);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  position: relative;
+  top: 1px;
+}
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* ── PAGES ── */
+.page { display: none; padding: 20px; }
+.page.active { display: block; }
+
+/* ── SECTION LABEL ── */
+.sec-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  color: var(--text3);
+  text-transform: uppercase;
+  margin-bottom: 12px;
+  margin-top: 24px;
+}
+.sec-label:first-child { margin-top: 0; }
+
+/* ── ROUTE CARD ── */
+.route-card {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: box-shadow 0.2s, transform 0.15s;
+  border: 1.5px solid transparent;
+  position: relative;
+}
+.route-card:active { transform: scale(0.985); }
+.route-card.selected { border-color: var(--accent); box-shadow: var(--shadow-hover); }
+.route-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.route-airports { display: flex; align-items: center; gap: 8px; }
+.airport-code {
+  font-family: 'DM Mono', monospace;
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1;
+}
+.route-arrow { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.arrow-line {
+  width: 36px; height: 1px; background: var(--border); position: relative;
+}
+.arrow-line::after {
+  content: '›'; position: absolute; right: -4px; top: -8px;
+  color: var(--text3); font-size: 14px;
+}
+.trip-type-badge { font-size: 10px; color: var(--text3); letter-spacing: 0.5px; }
+.route-price-area { text-align: right; }
+.current-price {
+  font-family: 'DM Mono', monospace;
+  font-size: 20px; font-weight: 500; color: var(--text); line-height: 1;
+}
+.price-change { font-size: 12px; font-weight: 500; margin-top: 3px; }
+.price-change.up { color: var(--red); }
+.price-change.down { color: var(--green); }
+.price-change.flat { color: var(--text3); }
+
+.route-card-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 10px;
+  border-top: 1px solid var(--sand);
+}
+.route-dates { font-size: 12px; color: var(--text2); }
+.route-dates span { color: var(--text3); }
+.route-actions { display: flex; gap: 6px; }
+.btn-icon {
+  width: 28px; height: 28px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--sand);
+  color: var(--text2); display: flex; align-items: center;
+  justify-content: center; cursor: pointer; font-size: 13px;
+  transition: all 0.15s;
+}
+.btn-icon:hover { background: var(--sand2); }
+
+/* 警示條 */
+.alert-bar {
+  background: var(--red-light); border: 1px solid #f0b8b4;
+  border-radius: var(--radius-sm); padding: 8px 12px;
+  font-size: 12px; color: var(--red); margin-top: 8px;
+  display: flex; align-items: center; gap: 6px;
+}
+.alert-bar.ai { background: var(--blue-light); border-color: #b8ccf0; color: var(--blue); }
+
+/* ── REFRESH ── */
+.refresh-row {
+  display: flex; justify-content: space-between;
+  align-items: center; margin-bottom: 14px;
+}
+.refresh-btn {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 8px; padding: 7px 14px; font-size: 13px;
+  color: var(--text2); cursor: pointer; font-family: 'DM Sans', sans-serif;
+  transition: all 0.15s;
+}
+.refresh-btn:hover { background: var(--sand); }
+.refresh-icon { display: inline-block; }
+.refresh-btn.loading .refresh-icon { animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.last-update { font-size: 11px; color: var(--text3); line-height: 1.5; }
+
+/* ── ADD BTN ── */
+.add-btn {
+  width: 100%; padding: 14px; border-radius: var(--radius);
+  border: 1.5px dashed var(--border); background: transparent;
+  color: var(--text3); font-size: 14px; font-family: 'DM Sans', sans-serif;
+  cursor: pointer; transition: all 0.15s;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin-top: 4px;
+}
+.add-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+.add-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* 上限提示 */
+.limit-note {
+  text-align: center; font-size: 11px; color: var(--text3);
+  margin-top: 8px; padding: 6px;
+}
+
+/* ── CHART ── */
+.chart-card {
+  background: var(--card); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 16px; margin-bottom: 16px;
+}
+.chart-wrap {
+  position: relative;
+  width: 100%;
+  height: 160px;
+}
+.chart-wrap canvas {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100% !important;
+  height: 100% !important;
+}
+.chart-header {
+  display: flex; justify-content: space-between;
+  align-items: flex-start; margin-bottom: 14px;
+}
+.chart-route { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--text); }
+.chart-sub { font-size: 12px; color: var(--text3); margin-top: 2px; }
+.period-btns { display: flex; gap: 4px; }
+.period-btn {
+  padding: 4px 9px; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--sand); color: var(--text2); font-size: 11px;
+  font-family: 'DM Mono', monospace; cursor: pointer; transition: all 0.15s;
+}
+.period-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+/* 中位數區間說明 */
+.median-legend {
+  display: flex; gap: 14px; margin-top: 10px; flex-wrap: wrap;
+}
+.legend-item {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; color: var(--text3);
+}
+.legend-dot {
+  width: 10px; height: 10px; border-radius: 2px;
+}
+
+/* ── AI CARD ── */
+.ai-card {
+  background: linear-gradient(135deg, #f0f7ff 0%, #e8f0fb 100%);
+  border: 1px solid #c5d8f5; border-radius: var(--radius);
+  padding: 16px; margin-bottom: 16px;
+}
+.ai-card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.ai-icon {
+  width: 28px; height: 28px; background: var(--blue); border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 13px;
+}
+.ai-label { font-size: 12px; font-weight: 600; color: var(--blue); letter-spacing: 0.5px; }
+.ai-content { font-size: 13px; color: #2a3f6b; line-height: 1.6; }
+.ai-verdict {
+  margin-top: 10px; display: inline-flex; align-items: center; gap: 6px;
+  background: white; border: 1px solid #c5d8f5; border-radius: 8px;
+  padding: 6px 12px; font-size: 12px; font-weight: 600; color: var(--blue);
+}
+
+/* ── MODAL ── */
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(42,37,32,0.5);
+  backdrop-filter: blur(4px); z-index: 200;
+  display: none; align-items: flex-end; justify-content: center;
+}
+.modal-backdrop.open { display: flex; }
+.modal {
+  background: var(--warm-white); border-radius: 24px 24px 0 0;
+  width: 100%; max-width: 480px; padding: 24px 20px 40px;
+  max-height: 90vh; overflow-y: auto;
+  animation: slideUp 0.28s cubic-bezier(0.34,1.1,0.64,1);
+}
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.modal-handle {
+  width: 36px; height: 4px; background: var(--border);
+  border-radius: 2px; margin: 0 auto 20px;
+}
+.modal-title { font-family: 'DM Serif Display', serif; font-size: 20px; margin-bottom: 20px; }
+
+/* ── FORM ── */
+.form-group { margin-bottom: 16px; }
+.form-label {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.8px;
+  color: var(--text3); text-transform: uppercase; margin-bottom: 6px; display: block;
+}
+.form-input {
+  width: 100%; background: var(--card); border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm); padding: 11px 14px; font-size: 14px;
+  font-family: 'DM Sans', sans-serif; color: var(--text); outline: none; transition: border 0.2s;
+}
+.form-input:focus { border-color: var(--accent); }
+.form-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.trip-type-select { display: flex; gap: 8px; margin-bottom: 16px; }
+.trip-type-btn {
+  flex: 1; padding: 9px 8px; border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border); background: var(--card);
+  color: var(--text2); font-size: 13px; font-family: 'DM Sans', sans-serif;
+  cursor: pointer; text-align: center; transition: all 0.15s;
+}
+.trip-type-btn.active {
+  border-color: var(--accent); background: var(--accent-light);
+  color: var(--accent); font-weight: 600;
+}
+
+/* ── AIRPORT SEARCH ── */
+.airport-field { position: relative; }
+.airport-input-wrap {
+  display: flex; align-items: center;
+  background: var(--card); border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm); transition: border 0.2s;
+  overflow: visible;
+}
+.airport-input-wrap:focus-within { border-color: var(--accent); }
+.airport-input-wrap input {
+  flex: 1; border: none; background: transparent;
+  padding: 11px 14px; font-size: 14px;
+  font-family: 'DM Sans', sans-serif; color: var(--text);
+  outline: none; min-width: 0;
+}
+.airport-iata-tag {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px; font-weight: 500;
+  color: var(--accent); background: var(--accent-light);
+  padding: 4px 10px; margin-right: 8px;
+  border-radius: 6px; white-space: nowrap;
+  display: none;
+}
+.airport-iata-tag.show { display: block; }
+.airport-clear {
+  padding: 0 10px; color: var(--text3); cursor: pointer;
+  font-size: 14px; display: none; align-items: center;
+}
+.airport-clear.show { display: flex; }
+.airport-dropdown {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+  background: var(--card); border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm); box-shadow: var(--shadow-hover);
+  z-index: 500; overflow: hidden; display: none;
+}
+.airport-dropdown.open { display: block; }
+.airport-option {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; cursor: pointer; transition: background 0.12s;
+  border-bottom: 1px solid var(--sand);
+}
+.airport-option:last-child { border-bottom: none; }
+.airport-option:hover { background: var(--sand); }
+.airport-option-iata {
+  font-family: 'DM Mono', monospace; font-size: 13px;
+  font-weight: 500; color: var(--accent);
+  min-width: 36px;
+}
+.airport-option-name { font-size: 13px; color: var(--text); line-height: 1.3; }
+.airport-option-city { font-size: 11px; color: var(--text3); margin-top: 1px; }
+.airport-loading {
+  padding: 12px 14px; font-size: 13px; color: var(--text3);
+  text-align: center;
+}
+
+.leg-item {
+  background: var(--sand); border-radius: var(--radius-sm);
+  padding: 12px; margin-bottom: 8px;
+}
+.leg-num {
+  font-size: 10px; font-weight: 600; color: var(--text3);
+  letter-spacing: 0.8px; margin-bottom: 8px; text-transform: uppercase;
+}
+.add-leg-btn {
+  width: 100%; padding: 10px; border-radius: var(--radius-sm);
+  border: 1px dashed var(--border); background: transparent;
+  color: var(--text3); font-size: 13px; font-family: 'DM Sans', sans-serif;
+  cursor: pointer; margin-top: 4px;
+}
+
+.submit-btn {
+  width: 100%; padding: 14px; background: var(--accent); color: white;
+  border: none; border-radius: var(--radius); font-size: 15px; font-weight: 600;
+  font-family: 'DM Sans', sans-serif; cursor: pointer; margin-top: 8px; transition: opacity 0.15s;
+}
+.submit-btn:hover { opacity: 0.9; }
+.cancel-btn {
+  width: 100%; padding: 12px; background: transparent; color: var(--text3);
+  border: none; border-radius: var(--radius); font-size: 14px;
+  font-family: 'DM Sans', sans-serif; cursor: pointer; margin-top: 4px;
+}
+
+/* ── SETTINGS ── */
+.settings-card {
+  background: var(--card); border-radius: var(--radius);
+  box-shadow: var(--shadow); overflow: hidden; margin-bottom: 16px;
+}
+.settings-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; border-bottom: 1px solid var(--sand);
+}
+.settings-row:last-child { border-bottom: none; }
+.settings-label { font-size: 14px; color: var(--text); }
+.settings-sub { font-size: 12px; color: var(--text3); margin-top: 2px; }
+.settings-value { font-size: 13px; color: var(--text2); font-family: 'DM Mono', monospace; }
+.toggle {
+  width: 42px; height: 24px; background: var(--border);
+  border-radius: 12px; position: relative; cursor: pointer; transition: background 0.2s;
+}
+.toggle.on { background: var(--accent); }
+.toggle::after {
+  content: ''; position: absolute; width: 18px; height: 18px;
+  background: white; border-radius: 50%; top: 3px; left: 3px;
+  transition: transform 0.2s; box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+.toggle.on::after { transform: translateX(18px); }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: 32px; left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: var(--text); color: white; padding: 10px 20px;
+  border-radius: 24px; font-size: 13px; z-index: 999;
+  transition: transform 0.3s cubic-bezier(0.34,1.2,0.64,1); white-space: nowrap;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+/* ── EMPTY ── */
+.empty-state { text-align: center; padding: 48px 20px; color: var(--text3); }
+.empty-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.5; }
+.empty-title { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--text2); margin-bottom: 6px; }
+.empty-sub { font-size: 13px; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-top">
+    <div class="logo-block">
+      <div class="logo">Flight <span>Tracker</span></div>
+      <div class="slogan">人生的出口——登機口</div>
+    </div>
+    <div class="header-badge">✈ 票價追蹤</div>
+  </div>
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('tracker')">追蹤清單</div>
+    <div class="tab" onclick="switchTab('chart')">票價走勢</div>
+    <div class="tab" onclick="switchTab('settings')">設定</div>
+  </div>
+</div>
+
+<!-- PAGE: 追蹤清單 -->
+<div class="page active" id="page-tracker">
+  <div style="height:4px"></div>
+  <div class="refresh-row">
+    <div class="last-update" id="last-update-text">尚未更新<br><span style="font-size:10px;color:var(--text3)">每日 08:00 / 20:00 自動更新</span></div>
+    <button class="refresh-btn" id="refresh-btn" onclick="refreshPrices()">
+      <span class="refresh-icon">↺</span> 立即刷新
+    </button>
+  </div>
+  <div class="sec-label">追蹤中的航線</div>
+  <div id="route-list"></div>
+  <button class="add-btn" id="add-btn" onclick="openModal()">+ 新增追蹤航線</button>
+  <div class="limit-note" id="limit-note"></div>
+</div>
+
+<!-- PAGE: 票價走勢 -->
+<div class="page" id="page-chart">
+  <div style="height:4px"></div>
+  <div id="chart-empty" class="empty-state" style="display:none">
+    <div class="empty-icon">📈</div>
+    <div class="empty-title">尚無走勢資料</div>
+    <div class="empty-sub">請先在追蹤清單選擇一條航線，<br>系統會在幾天後累積出走勢圖。</div>
+  </div>
+  <div id="chart-content">
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-route" id="chart-route-label">TPE → NRT</div>
+          <div class="chart-sub" id="chart-date-label">點選下方航線查看走勢</div>
+        </div>
+        <div class="period-btns">
+          <button class="period-btn active" onclick="switchPeriod('7d',this)">7天</button>
+          <button class="period-btn" onclick="switchPeriod('14d',this)">14天</button>
+          <button class="period-btn" onclick="switchPeriod('30d',this)">30天</button>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="price-chart"></canvas>
+      </div>
+      <div class="median-legend">
+        <div class="legend-item">
+          <div class="legend-dot" style="background:var(--red);"></div>
+          <span>目前票價</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="background:rgba(193,123,58,0.35);border:1px solid var(--accent);"></div>
+          <span>去年同期中位數區間</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="background:#b0b8c8;"></div>
+          <span>歷史常態基準</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 中位數摘要卡 -->
+    <div class="chart-card" style="padding:14px 16px">
+      <div style="font-size:12px;font-weight:600;color:var(--text3);letter-spacing:0.8px;text-transform:uppercase;margin-bottom:12px">票價位置分析</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;text-align:center">
+        <div>
+          <div style="font-family:'DM Mono',monospace;font-size:16px;font-weight:500;color:var(--red)" id="stat-current">$14,200</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:3px">目前票價</div>
+        </div>
+        <div>
+          <div style="font-family:'DM Mono',monospace;font-size:16px;font-weight:500;color:var(--accent)" id="stat-median">$12,500</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:3px">去年同期中位</div>
+        </div>
+        <div>
+          <div style="font-family:'DM Mono',monospace;font-size:16px;font-weight:500;color:var(--red)" id="stat-diff">+13.6%</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:3px">偏離幅度</div>
+        </div>
+      </div>
+      <div style="margin-top:12px;padding:8px 12px;border-radius:8px;font-size:12px;line-height:1.5" id="stat-verdict"></div>
+    </div>
+
+    <div class="ai-card">
+      <div class="ai-card-header">
+        <div class="ai-icon">✦</div>
+        <div class="ai-label">AI 分析</div>
+      </div>
+      <div class="ai-content" id="ai-text">選擇下方航線後，AI 將分析票價趨勢並給出建議。</div>
+      <div class="ai-verdict" id="ai-verdict" style="display:none"></div>
+    </div>
+
+    <div class="sec-label">選擇航線</div>
+    <div id="chart-route-selector"></div>
+  </div>
+</div>
+
+<!-- PAGE: 設定 -->
+<div class="page" id="page-settings">
+  <div style="height:4px"></div>
+  <div class="sec-label">通知設定</div>
+  <div class="settings-card">
+    <div class="settings-row">
+      <div>
+        <div class="settings-label">Email 通知</div>
+        <div class="settings-sub">票價達到門檻時寄信</div>
+      </div>
+      <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+    </div>
+    <div class="settings-row">
+      <div>
+        <div class="settings-label">通知 Email</div>
+        <div class="settings-sub">接收警示的信箱</div>
+      </div>
+      <div class="settings-value">未設定</div>
+    </div>
+    <div class="settings-row">
+      <div>
+        <div class="settings-label">AI 分析通知</div>
+        <div class="settings-sub">AI 判斷應購買時通知</div>
+      </div>
+      <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+    </div>
+  </div>
+
+  <div class="sec-label">查詢設定</div>
+  <div class="settings-card">
+    <div class="settings-row">
+      <div>
+        <div class="settings-label">自動刷新頻率</div>
+        <div class="settings-sub">每日兩次，固定時段查詢</div>
+      </div>
+      <div class="settings-value">08:00 / 20:00</div>
+    </div>
+    <div class="settings-row">
+      <div>
+        <div class="settings-label">最多追蹤航線</div>
+        <div class="settings-sub">配合免費額度上限</div>
+      </div>
+      <div class="settings-value">3 條</div>
+    </div>
+    <div class="settings-row">
+      <div>
+        <div class="settings-label">漲跌通知門檻</div>
+        <div class="settings-sub">超過此幅度才通知</div>
+      </div>
+      <div class="settings-value">±10%</div>
+    </div>
+  </div>
+
+  <div class="sec-label">關於</div>
+  <div class="settings-card">
+    <div class="settings-row">
+      <div class="settings-label">版本</div>
+      <div class="settings-value">v1.0</div>
+    </div>
+    <div class="settings-row">
+      <div class="settings-label">資料來源</div>
+      <div class="settings-value">SerpApi</div>
+    </div>
+    <div class="settings-row">
+      <div class="settings-label">AI 引擎</div>
+      <div class="settings-value">Claude API</div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-backdrop" id="modal-backdrop" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">新增追蹤航線</div>
+    <div class="trip-type-select">
+      <button class="trip-type-btn active" onclick="setTripType('one_way',this)">單程</button>
+      <button class="trip-type-btn" onclick="setTripType('round_trip',this)">來回</button>
+      <button class="trip-type-btn" onclick="setTripType('multi_city',this)">多點</button>
+    </div>
+    <div id="form-standard">
+      <div class="form-group airport-field">
+        <label class="form-label">出發地</label>
+        <div class="airport-input-wrap" id="wrap-origin">
+          <input id="f-origin-text" placeholder="輸入城市或機場名稱" autocomplete="off"
+            oninput="airportSearch('origin',this.value)"
+            onfocus="airportSearch('origin',this.value)">
+          <span class="airport-iata-tag" id="tag-origin"></span>
+          <span class="airport-clear" id="clear-origin" onclick="clearAirport('origin')">✕</span>
+        </div>
+        <input type="hidden" id="f-origin">
+        <div class="airport-dropdown" id="drop-origin"></div>
+      </div>
+      <div class="form-group airport-field">
+        <label class="form-label">目的地</label>
+        <div class="airport-input-wrap" id="wrap-dest">
+          <input id="f-dest-text" placeholder="輸入城市或機場名稱" autocomplete="off"
+            oninput="airportSearch('dest',this.value)"
+            onfocus="airportSearch('dest',this.value)">
+          <span class="airport-iata-tag" id="tag-dest"></span>
+          <span class="airport-clear" id="clear-dest" onclick="clearAirport('dest')">✕</span>
+        </div>
+        <input type="hidden" id="f-dest">
+        <div class="airport-dropdown" id="drop-dest"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">出發日期區間</label>
+        <div class="form-row2">
+          <input class="form-input" id="f-depart-from" type="date">
+          <input class="form-input" id="f-depart-to" type="date">
+        </div>
+      </div>
+      <div id="return-date-group" style="display:none">
+        <div class="form-group">
+          <label class="form-label">回程日期區間</label>
+          <div class="form-row2">
+            <input class="form-input" id="f-return-from" type="date">
+            <input class="form-input" id="f-return-to" type="date">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="form-multi" style="display:none">
+      <div id="legs-container"></div>
+      <button class="add-leg-btn" onclick="addLeg()">+ 新增一段航程</button>
+    </div>
+    <div class="form-group" style="margin-top:16px">
+      <label class="form-label">目標票價（選填，低於此價格通知）</label>
+      <input class="form-input" id="f-threshold" type="number" placeholder="如：15000">
+    </div>
+    <button class="submit-btn" onclick="submitRoute()">開始追蹤</button>
+    <button class="cancel-btn" onclick="closeModal()">取消</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const KEY = 'flightwatch_routes_v2';
+const MAX_ROUTES = 3;
+let routes = JSON.parse(localStorage.getItem(KEY) || '[]');
+let currentTripType = 'one_way';
+let legCount = 2;
+let selectedChartIdx = 0;
+let priceChart = null;
+let currentPeriod = '7d';
+
+// Worker 後端網址（金鑰都藏在這後面，前端零金鑰）
+const WORKER_URL = 'https://flight-tracker.mmiachenn.workers.dev/';
+
+// 示範資料
+function getDemoRoutes() {
+  return [
+    {
+      id: 1, type: 'round_trip', origin: 'TPE', dest: 'NRT',
+      depart_range: ['2025-09-01','2025-09-07'],
+      return_range: ['2025-09-14','2025-09-20'],
+      current_price: 14200, prev_price: 12800, threshold: 15000,
+      last_checked: '05/31 09:00',
+      history_7d:  [12800,13100,12950,13400,13800,14000,14200],
+      history_14d: [11900,12100,12300,12500,12400,12800,13100,12950,13200,13400,13600,13800,14000,14200],
+      history_30d: Array.from({length:30},(_,i)=>11000+Math.round(i*110+Math.sin(i)*300)),
+      median_range: [11500, 13200],
+      median_value: 12500
+    },
+    {
+      id: 2, type: 'one_way', origin: 'TPE', dest: 'BKK',
+      depart_range: ['2025-10-01','2025-10-10'],
+      return_range: null,
+      current_price: 6800, prev_price: 7200, threshold: null,
+      last_checked: '05/31 09:00',
+      history_7d:  [7200,7100,7050,6950,6900,6850,6800],
+      history_14d: [7500,7400,7350,7300,7250,7200,7100,7050,6950,6900,6870,6850,6820,6800],
+      history_30d: Array.from({length:30},(_,i)=>7800-Math.round(i*32+Math.sin(i)*150)),
+      median_range: [6500, 7800],
+      median_value: 7100
+    }
+  ];
+}
+
+if (routes.length === 0) routes = getDemoRoutes();
+
+// ── TABS ──
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach((t,i) =>
+    t.classList.toggle('active', ['tracker','chart','settings'][i] === tab));
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-'+tab).classList.add('active');
+  if (tab === 'chart') renderChart();
+}
+
+// ── RENDER ROUTES ──
+function renderRoutes() {
+  const el = document.getElementById('route-list');
+  const addBtn = document.getElementById('add-btn');
+  const limitNote = document.getElementById('limit-note');
+  const atLimit = routes.length >= MAX_ROUTES;
+
+  addBtn.disabled = atLimit;
+  limitNote.textContent = atLimit ? `已達上限（最多 ${MAX_ROUTES} 條航線）` : '';
+
+  if (routes.length === 0) {
+    el.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">✈️</div>
+      <div class="empty-title">還沒有追蹤航線</div>
+      <div class="empty-sub">點下方按鈕新增你想追蹤的航線</div>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = routes.map((r, i) => {
+    const diff = r.current_price - r.prev_price;
+    const pct = r.prev_price ? ((diff/r.prev_price)*100).toFixed(1) : 0;
+    const cls = diff > 0 ? 'up' : diff < 0 ? 'down' : 'flat';
+    const arrow = diff > 0 ? '▲' : diff < 0 ? '▼' : '—';
+    const pctStr = diff !== 0 ? `${arrow} ${Math.abs(pct)}%` : '—';
+    const typeLabel = {round_trip:'來回', multi_city:'多點', one_way:'單程'}[r.type];
+    const showAlert = diff > 0 && Math.abs(pct) >= 10;
+
+    let datesHtml = '';
+    if (r.type === 'multi_city') {
+      datesHtml = `<span>多段行程</span>`;
+    } else {
+      const d1 = r.depart_range[0].slice(5).replace('-','/');
+      const d2 = r.depart_range[1].slice(5).replace('-','/');
+      datesHtml = `出發 <span>${d1}—${d2}</span>`;
+      if (r.return_range) {
+        const r1 = r.return_range[0].slice(5).replace('-','/');
+        const r2 = r.return_range[1].slice(5).replace('-','/');
+        datesHtml += ` ｜ 回程 <span>${r1}—${r2}</span>`;
+      }
+    }
+
+    return `<div class="route-card" onclick="selectForChart(${i})">
+      <div class="route-card-top">
+        <div class="route-airports">
+          <div class="airport-code">${r.origin}</div>
+          <div class="route-arrow">
+            <div class="arrow-line"></div>
+            <div class="trip-type-badge">${typeLabel}</div>
+          </div>
+          <div class="airport-code">${r.dest}</div>
+        </div>
+        <div class="route-price-area">
+          <div class="current-price">NT$ ${r.current_price.toLocaleString()}</div>
+          <div class="price-change ${cls}">${pctStr}</div>
+        </div>
+      </div>
+      ${showAlert ? `<div class="alert-bar">⚠ 票價上漲 ${Math.abs(pct)}%，已超過通知門檻</div>` : ''}
+      <div class="route-card-bottom">
+        <div class="route-dates">${datesHtml}</div>
+        <div class="route-actions">
+          <div class="btn-icon" onclick="editRoute(${i},event)" title="編輯">✎</div>
+          <div class="btn-icon" onclick="deleteRoute(${i},event)" title="刪除" style="color:var(--text3)">🗑</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const checked = routes.find(r => r.last_checked);
+  document.getElementById('last-update-text').innerHTML =
+    checked ? `上次更新：${checked.last_checked}<br><span style="font-size:10px;color:var(--text3)">每日 08:00 / 20:00 自動更新</span>`
+    : `尚未更新<br><span style="font-size:10px;color:var(--text3)">每日 08:00 / 20:00 自動更新</span>`;
+}
+
+// ── REFRESH ──
+async function refreshPrices() {
+  const btn = document.getElementById('refresh-btn');
+  btn.classList.add('loading');
+  btn.innerHTML = '<span class="refresh-icon">↺</span> 更新中...';
+
+  let successCount = 0;
+  let failCount = 0;
+
+  for (const r of routes) {
+    // 多點行程暫時略過即時查價（SerpApi 單次查單一航段）
+    if (r.type === 'multi_city') continue;
+
+    // 用日期區間的起始日當查詢日（節省額度）
+    const outbound = r.depart_range ? r.depart_range[0] : null;
+    const ret = r.return_range ? r.return_range[0] : null;
+    if (!r.origin || !r.dest || !outbound) { failCount++; continue; }
+
+    try {
+      const resp = await fetch(WORKER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'search_flights',
+          origin: r.origin,
+          dest: r.dest,
+          outbound_date: outbound,
+          return_date: ret,
+          trip_type: r.type,
+        }),
+      });
+      const data = await resp.json();
+
+      if (data.ok && data.lowest_price != null) {
+        // 保留前一次價格做漲跌比較
+        r.prev_price = r.current_price || data.lowest_price;
+        r.current_price = data.lowest_price;
+
+        // 累積歷史（每次刷新存一筆，最多保留 30 筆）
+        if (!Array.isArray(r.history_7d)) r.history_7d = [];
+        r.history_7d.push(data.lowest_price);
+        if (r.history_7d.length > 30) r.history_7d.shift();
+        // 14d / 30d 暫時共用同一份累積資料
+        r.history_14d = r.history_7d.slice(-14);
+        r.history_30d = r.history_7d.slice(-30);
+
+        // SerpApi 提供的常態區間，拿來做中位數對比
+        if (data.typical_range && data.typical_range.length === 2) {
+          r.median_range = data.typical_range;
+          r.median_value = Math.round((data.typical_range[0] + data.typical_range[1]) / 2);
+        }
+        r.price_level = data.price_level || null;
+        successCount++;
+      } else {
+        failCount++;
+        console.warn('查價失敗', r.origin, r.dest, data.error);
+      }
+    } catch (e) {
+      failCount++;
+      console.error('查價錯誤', e);
+    }
+  }
+
+  // 更新時間戳
+  const now = new Date();
+  const ts = `${now.getMonth()+1}/${now.getDate()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  routes.forEach(r => r.last_checked = ts);
+
+  saveRoutes();
+  renderRoutes();
+
+  btn.classList.remove('loading');
+  btn.innerHTML = '<span class="refresh-icon">↺</span> 立即刷新';
+
+  if (successCount > 0 && failCount === 0) showToast('票價已更新');
+  else if (successCount > 0) showToast(`已更新 ${successCount} 條，${failCount} 條失敗`);
+  else showToast('查價失敗，請稍後再試');
+}
+
+// ── CHART ──
+function selectForChart(idx) {
+  selectedChartIdx = idx;
+  switchTab('chart');
+}
+
+function getHistory(r) {
+  if (currentPeriod === '14d') return r.history_14d || r.history_7d;
+  if (currentPeriod === '30d') return r.history_30d || r.history_7d;
+  return r.history_7d;
+}
+
+function renderChart() {
+  const r = routes[selectedChartIdx];
+  if (!r) {
+    document.getElementById('chart-empty').style.display = 'block';
+    document.getElementById('chart-content').style.display = 'none';
+    return;
+  }
+  document.getElementById('chart-empty').style.display = 'none';
+  document.getElementById('chart-content').style.display = 'block';
+  document.getElementById('chart-route-label').textContent = `${r.origin} → ${r.dest}`;
+
+  const history = getHistory(r);
+  const days = history.length;
+  const labels = history.map((_,i) => {
+    const d = new Date(); d.setDate(d.getDate() - (days-1-i));
+    return `${d.getMonth()+1}/${d.getDate()}`;
+  });
+
+  const isUp = history[history.length-1] >= history[0];
+  const lineColor = isUp ? '#c0392b' : '#27794a';
+
+  // 中位數區間帶（去年同期）
+  const medLow  = r.median_range ? r.median_range[0] : null;
+  const medHigh = r.median_range ? r.median_range[1] : null;
+  const medLine = r.median_value || null;
+
+  // Y 軸範圍：取所有值 ± 小幅 padding
+  const allVals = [...history, medLow, medHigh, medLine].filter(Boolean);
+  const minVal = Math.min(...allVals);
+  const maxVal = Math.max(...allVals);
+  const pad = (maxVal - minVal) * 0.12;
+  const yMin = Math.floor((minVal - pad) / 500) * 500;
+  const yMax = Math.ceil((maxVal + pad) / 500) * 500;
+  // 讓 Y 軸刻度間隔約 1000~2000
+  const range = yMax - yMin;
+  const stepSize = range <= 2000 ? 200 : range <= 4000 ? 300 : range <= 8000 ? 500 : 1000;
+
+  if (priceChart) priceChart.destroy();
+  const ctx = document.getElementById('price-chart').getContext('2d');
+
+  // 中位數區間 fill plugin
+  const medBandPlugin = {
+    id: 'medBand',
+    beforeDraw(chart) {
+      if (!medLow || !medHigh) return;
+      const {ctx: c, scales:{x,y}, chartArea:{left,right}} = chart;
+      const yTop = y.getPixelForValue(medHigh);
+      const yBot = y.getPixelForValue(medLow);
+      c.save();
+      c.fillStyle = 'rgba(193,123,58,0.10)';
+      c.fillRect(left, yTop, right-left, yBot-yTop);
+      c.strokeStyle = 'rgba(193,123,58,0.3)';
+      c.setLineDash([4,3]);
+      c.lineWidth = 1;
+      c.beginPath(); c.moveTo(left, yTop); c.lineTo(right, yTop); c.stroke();
+      c.beginPath(); c.moveTo(left, yBot); c.lineTo(right, yBot); c.stroke();
+      c.restore();
+    }
+  };
+
+  priceChart = new Chart(ctx, {
+    type: 'line',
+    plugins: [medBandPlugin],
+    data: {
+      labels,
+      datasets: [
+        {
+          label: '目前票價',
+          data: history,
+          borderColor: lineColor,
+          borderWidth: 2,
+          tension: 0.4,
+          fill: true,
+          backgroundColor: ctx2 => {
+            const g = ctx2.chart.ctx.createLinearGradient(0,0,0,130);
+            g.addColorStop(0, isUp ? 'rgba(192,57,43,0.10)' : 'rgba(39,121,74,0.10)');
+            g.addColorStop(1, 'rgba(255,249,242,0)');
+            return g;
+          },
+          pointRadius: 2.5,
+          pointBackgroundColor: lineColor,
+        },
+        {
+          label: '去年同期中位',
+          data: Array(days).fill(medLine),
+          borderColor: 'rgba(180,160,130,0.6)',
+          borderWidth: 1.5,
+          borderDash: [5,4],
+          pointRadius: 0,
+          fill: false,
+          tension: 0,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#2a2520',
+          titleColor: '#a89d94',
+          bodyColor: '#faf8f4',
+          callbacks: { label: c => `NT$ ${c.raw.toLocaleString()}` }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: '#f0ebe1' },
+          ticks: { color: '#a89d94', font:{size:10}, maxTicksLimit: 7 }
+        },
+        y: {
+          min: yMin, max: yMax,
+          grid: { color: '#f0ebe1' },
+          ticks: {
+            color: '#a89d94', font:{size:10},
+            stepSize,
+            callback: v => `$${(v/1000).toFixed(v%1000===0?0:1)}k`
+          }
+        }
+      }
+    }
+  });
+
+  // 票價位置分析
+  const cur = r.current_price;
+  const med = r.median_value;
+  if (med) {
+    const diff = ((cur - med) / med * 100).toFixed(1);
+    const isHigh = cur > medHigh;
+    const isLow  = cur < medLow;
+    const isNorm = !isHigh && !isLow;
+    document.getElementById('stat-current').textContent = `$${cur.toLocaleString()}`;
+    document.getElementById('stat-median').textContent  = `$${med.toLocaleString()}`;
+    document.getElementById('stat-diff').textContent    = `${diff > 0 ? '+' : ''}${diff}%`;
+    document.getElementById('stat-diff').style.color    = diff > 0 ? 'var(--red)' : 'var(--green)';
+    const verdict = document.getElementById('stat-verdict');
+    if (isHigh) {
+      verdict.style.background = 'var(--red-light)';
+      verdict.style.color = 'var(--red)';
+      verdict.textContent = `⚠ 目前票價高於去年同期正常範圍（$${medLow.toLocaleString()} — $${medHigh.toLocaleString()}），處於相對偏高水位。`;
+    } else if (isLow) {
+      verdict.style.background = 'var(--green-light)';
+      verdict.style.color = 'var(--green)';
+      verdict.textContent = `✓ 目前票價低於去年同期正常範圍，處於相對低點，可考慮購入。`;
+    } else {
+      verdict.style.background = 'var(--sand)';
+      verdict.style.color = 'var(--text2)';
+      verdict.textContent = `— 目前票價落在去年同期正常區間（$${medLow.toLocaleString()} — $${medHigh.toLocaleString()}）內，屬常態水位。`;
+    }
+  }
+
+  // AI 分析：先顯示本地暫估文字，再非同步呼叫 Claude 取得真實分析
+  const aiTextEl = document.getElementById('ai-text');
+  const verdictEl = document.getElementById('ai-verdict');
+  const pct0 = Math.abs(((history[history.length-1]-history[0])/history[0]*100)).toFixed(0);
+  aiTextEl.textContent =
+    `過去 ${days} 天 ${r.origin}→${r.dest} 票價從 NT$${history[0].toLocaleString()} ${isUp?'上漲至':'下降至'} NT$${history[history.length-1].toLocaleString()}（${isUp?'漲':'跌'}約 ${pct0}%）。AI 分析中…`;
+  verdictEl.style.display = 'none';
+
+  loadAIAnalysis(r, history);
+
+  // 路線選擇器
+  document.getElementById('chart-route-selector').innerHTML = routes.map((r2,i) =>
+    `<div class="route-card ${i===selectedChartIdx?'selected':''}" onclick="selectChart(${i})" style="padding:12px 16px;margin-bottom:8px">
+      <div class="route-card-top" style="margin:0">
+        <div class="route-airports">
+          <div class="airport-code" style="font-size:16px">${r2.origin}</div>
+          <div class="route-arrow"><div class="arrow-line"></div></div>
+          <div class="airport-code" style="font-size:16px">${r2.dest}</div>
+        </div>
+        <div style="font-family:'DM Mono',monospace;font-size:15px;font-weight:500">NT$ ${r2.current_price.toLocaleString()}</div>
+      </div>
+    </div>`
+  ).join('');
+}
+
+function selectChart(idx) {
+  selectedChartIdx = idx;
+  renderChart();
+}
+
+// ── AI 分析（呼叫 Worker → Claude）──
+async function loadAIAnalysis(r, history) {
+  const aiTextEl = document.getElementById('ai-text');
+  const verdictEl = document.getElementById('ai-verdict');
+
+  // 計算距離出發天數
+  let daysUntil = null;
+  if (r.depart_range && r.depart_range[0]) {
+    const dep = new Date(r.depart_range[0]);
+    daysUntil = Math.round((dep - new Date()) / 86400000);
+  }
+
+  try {
+    const resp = await fetch(WORKER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'ai_analysis',
+        route_label: `${r.origin} → ${r.dest}`,
+        history: history,
+        typical_range: r.median_range || null,
+        days_until_departure: daysUntil,
+      }),
+    });
+    const data = await resp.json();
+
+    if (data.ok && data.summary) {
+      aiTextEl.textContent = data.summary;
+      verdictEl.style.display = 'inline-flex';
+      const icon = data.verdict === 'buy_now' ? '🔺'
+                 : data.verdict === 'wait' ? '⏳' : '•';
+      verdictEl.textContent = `${icon} ${data.verdict_text || ''}`;
+      verdictEl.style.background = data.verdict === 'buy_now' ? 'var(--red-light)' : 'white';
+      verdictEl.style.color = data.verdict === 'buy_now' ? 'var(--red)' : 'var(--blue)';
+    } else {
+      aiTextEl.textContent = 'AI 分析暫時無法取得，稍後再試。';
+      verdictEl.style.display = 'none';
+    }
+  } catch (e) {
+    aiTextEl.textContent = 'AI 分析連線失敗，請檢查網路後重試。';
+    verdictEl.style.display = 'none';
+    console.error('AI 分析錯誤', e);
+  }
+}
+
+function switchPeriod(period, btn) {
+  currentPeriod = period;
+  document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderChart();
+}
+
+// ── MODAL ──
+function openModal() {
+  if (routes.length >= MAX_ROUTES) { showToast('已達上限，最多追蹤 3 條航線'); return; }
+  document.getElementById('modal-backdrop').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  resetForm();
+}
+function closeModal() {
+  document.getElementById('modal-backdrop').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function closeModalOutside(e) {
+  if (e.target === document.getElementById('modal-backdrop')) closeModal();
+}
+function resetForm() {
+  ['f-origin','f-dest','f-depart-from','f-depart-to','f-return-from','f-return-to','f-threshold']
+    .forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  setTripType('one_way', document.querySelector('.trip-type-btn'));
+}
+
+function setTripType(type, btn) {
+  currentTripType = type;
+  document.querySelectorAll('.trip-type-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('form-standard').style.display = type==='multi_city' ? 'none' : 'block';
+  document.getElementById('form-multi').style.display    = type==='multi_city' ? 'block' : 'none';
+  document.getElementById('return-date-group').style.display = type==='round_trip' ? 'block' : 'none';
+  if (type==='multi_city') { legCount=2; renderLegs(); }
+}
+
+function addLeg() {
+  if (legCount >= 5) { showToast('最多 5 段航程'); return; }
+  legCount++; renderLegs();
+}
+function renderLegs() {
+  document.getElementById('legs-container').innerHTML =
+    Array.from({length:legCount},(_,i)=>`
+      <div class="leg-item">
+        <div class="leg-num">第 ${i+1} 段</div>
+        <div class="form-row2" style="margin-bottom:8px">
+          <input class="form-input" id="leg-${i}-origin" placeholder="出發 (TPE)">
+          <input class="form-input" id="leg-${i}-dest" placeholder="抵達 (NRT)">
+        </div>
+        <div class="form-row2">
+          <input class="form-input" id="leg-${i}-from" type="date">
+          <input class="form-input" id="leg-${i}-to" type="date">
+        </div>
+      </div>`).join('');
+}
+
+function submitRoute() {
+  let nr = { id:Date.now(), type:currentTripType, current_price:0, prev_price:0,
+    history_7d:[], history_14d:[], history_30d:[], last_checked:null,
+    median_range:[11000,14000], median_value:12500 };
+  if (currentTripType==='multi_city') {
+    nr.legs = Array.from({length:legCount},(_,i)=>({
+      origin: document.getElementById(`leg-${i}-origin`)?.value.toUpperCase()||'',
+      dest:   document.getElementById(`leg-${i}-dest`)?.value.toUpperCase()||'',
+      date_range:[document.getElementById(`leg-${i}-from`)?.value, document.getElementById(`leg-${i}-to`)?.value]
+    }));
+    nr.origin = nr.legs[0]?.origin||'';
+    nr.dest   = nr.legs[nr.legs.length-1]?.dest||'';
+  } else {
+    nr.origin = document.getElementById('f-origin').value.toUpperCase();
+    nr.dest   = document.getElementById('f-dest').value.toUpperCase();
+    nr.depart_range = [document.getElementById('f-depart-from').value, document.getElementById('f-depart-to').value];
+    nr.return_range = currentTripType==='round_trip'
+      ? [document.getElementById('f-return-from').value, document.getElementById('f-return-to').value] : null;
+  }
+  nr.threshold = document.getElementById('f-threshold').value ? parseInt(document.getElementById('f-threshold').value) : null;
+  if (!nr.origin || !nr.dest) { showToast('請填寫起訖地'); return; }
+  routes.push(nr);
+  saveRoutes(); renderRoutes(); closeModal();
+  showToast(`已新增 ${nr.origin} → ${nr.dest}`);
+}
+
+function deleteRoute(idx, e) {
+  e.stopPropagation();
+  const r = routes[idx];
+  if (!confirm(`確定移除 ${r.origin} → ${r.dest} 的追蹤？`)) return;
+  routes.splice(idx,1);
+  saveRoutes(); renderRoutes();
+  showToast('已移除追蹤');
+}
+function editRoute(idx, e) {
+  e.stopPropagation();
+  showToast('編輯功能即將推出');
+}
+
+function saveRoutes() { localStorage.setItem(KEY, JSON.stringify(routes)); }
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+// ── AIRPORT SEARCH ──
+const AIRPORTS = [
+  { iata:'TPE', name:'桃園國際機場', city:'台北，台灣', en:'Taoyuan International' },
+  { iata:'TSA', name:'台北松山機場', city:'台北，台灣', en:'Taipei Songshan' },
+  { iata:'KHH', name:'高雄國際機場', city:'高雄，台灣', en:'Kaohsiung International' },
+  { iata:'RMQ', name:'台中清泉崗機場', city:'台中，台灣', en:'Taichung' },
+  { iata:'NRT', name:'東京成田國際機場', city:'東京，日本', en:'Tokyo Narita' },
+  { iata:'HND', name:'東京羽田機場', city:'東京，日本', en:'Tokyo Haneda' },
+  { iata:'KIX', name:'大阪關西國際機場', city:'大阪，日本', en:'Osaka Kansai' },
+  { iata:'ITM', name:'大阪伊丹機場', city:'大阪，日本', en:'Osaka Itami' },
+  { iata:'NGO', name:'名古屋中部國際機場', city:'名古屋，日本', en:'Nagoya Centrair' },
+  { iata:'CTS', name:'札幌新千歲機場', city:'札幌，日本', en:'Sapporo Chitose' },
+  { iata:'OKA', name:'沖繩那霸機場', city:'沖繩，日本', en:'Naha' },
+  { iata:'FUK', name:'福岡機場', city:'福岡，日本', en:'Fukuoka' },
+  { iata:'ICN', name:'首爾仁川國際機場', city:'首爾，韓國', en:'Seoul Incheon' },
+  { iata:'GMP', name:'首爾金浦機場', city:'首爾，韓國', en:'Seoul Gimpo' },
+  { iata:'PUS', name:'釜山金海國際機場', city:'釜山，韓國', en:'Busan Gimhae' },
+  { iata:'BKK', name:'曼谷素萬那普機場', city:'曼谷，泰國', en:'Bangkok Suvarnabhumi' },
+  { iata:'DMK', name:'曼谷廊曼機場', city:'曼谷，泰國', en:'Bangkok Don Mueang' },
+  { iata:'SIN', name:'新加坡樟宜機場', city:'新加坡', en:'Singapore Changi' },
+  { iata:'KUL', name:'吉隆坡國際機場', city:'吉隆坡，馬來西亞', en:'Kuala Lumpur KLIA' },
+  { iata:'MNL', name:'馬尼拉尼諾伊機場', city:'馬尼拉，菲律賓', en:'Manila Ninoy Aquino' },
+  { iata:'CEB', name:'宿霧麥克坦機場', city:'宿霧，菲律賓', en:'Cebu Mactan' },
+  { iata:'DPS', name:'峇里島伍拉萊機場', city:'峇里島，印尼', en:'Bali Ngurah Rai' },
+  { iata:'CGK', name:'雅加達蘇加諾哈達機場', city:'雅加達，印尼', en:'Jakarta Soekarno-Hatta' },
+  { iata:'SGN', name:'胡志明市新山一機場', city:'胡志明市，越南', en:'Ho Chi Minh Tan Son Nhat' },
+  { iata:'HAN', name:'河內內排機場', city:'河內，越南', en:'Hanoi Noi Bai' },
+  { iata:'DAD', name:'峴港國際機場', city:'峴港，越南', en:'Da Nang' },
+  { iata:'RGN', name:'仰光國際機場', city:'仰光，緬甸', en:'Yangon' },
+  { iata:'PEK', name:'北京首都國際機場', city:'北京，中國', en:'Beijing Capital' },
+  { iata:'PKX', name:'北京大興國際機場', city:'北京，中國', en:'Beijing Daxing' },
+  { iata:'PVG', name:'上海浦東國際機場', city:'上海，中國', en:'Shanghai Pudong' },
+  { iata:'SHA', name:'上海虹橋機場', city:'上海，中國', en:'Shanghai Hongqiao' },
+  { iata:'CAN', name:'廣州白雲國際機場', city:'廣州，中國', en:'Guangzhou Baiyun' },
+  { iata:'HKG', name:'香港國際機場', city:'香港', en:'Hong Kong' },
+  { iata:'MFM', name:'澳門國際機場', city:'澳門', en:'Macau' },
+  { iata:'LHR', name:'倫敦希斯羅機場', city:'倫敦，英國', en:'London Heathrow' },
+  { iata:'LGW', name:'倫敦蓋威克機場', city:'倫敦，英國', en:'London Gatwick' },
+  { iata:'CDG', name:'巴黎戴高樂機場', city:'巴黎，法國', en:'Paris Charles de Gaulle' },
+  { iata:'ORY', name:'巴黎奧利機場', city:'巴黎，法國', en:'Paris Orly' },
+  { iata:'FRA', name:'法蘭克福機場', city:'法蘭克福，德國', en:'Frankfurt' },
+  { iata:'AMS', name:'阿姆斯特丹史基浦機場', city:'阿姆斯特丹，荷蘭', en:'Amsterdam Schiphol' },
+  { iata:'ZRH', name:'蘇黎世機場', city:'蘇黎世，瑞士', en:'Zurich' },
+  { iata:'VIE', name:'維也納國際機場', city:'維也納，奧地利', en:'Vienna' },
+  { iata:'FCO', name:'羅馬菲烏米奇諾機場', city:'羅馬，義大利', en:'Rome Fiumicino' },
+  { iata:'MXP', name:'米蘭馬爾彭薩機場', city:'米蘭，義大利', en:'Milan Malpensa' },
+  { iata:'BCN', name:'巴塞隆納機場', city:'巴塞隆納，西班牙', en:'Barcelona El Prat' },
+  { iata:'MAD', name:'馬德里機場', city:'馬德里，西班牙', en:'Madrid Barajas' },
+  { iata:'LAX', name:'洛杉磯國際機場', city:'洛杉磯，美國', en:'Los Angeles' },
+  { iata:'SFO', name:'舊金山國際機場', city:'舊金山，美國', en:'San Francisco' },
+  { iata:'JFK', name:'紐約甘迺迪機場', city:'紐約，美國', en:'New York JFK' },
+  { iata:'EWR', name:'紐約紐瓦克機場', city:'紐約，美國', en:'New York Newark' },
+  { iata:'ORD', name:'芝加哥奧黑爾機場', city:'芝加哥，美國', en:'Chicago O\'Hare' },
+  { iata:'SEA', name:'西雅圖塔科馬機場', city:'西雅圖，美國', en:'Seattle-Tacoma' },
+  { iata:'YVR', name:'溫哥華國際機場', city:'溫哥華，加拿大', en:'Vancouver' },
+  { iata:'YYZ', name:'多倫多皮爾遜機場', city:'多倫多，加拿大', en:'Toronto Pearson' },
+  { iata:'SYD', name:'雪梨金斯福德史密斯機場', city:'雪梨，澳洲', en:'Sydney Kingsford Smith' },
+  { iata:'MEL', name:'墨爾本機場', city:'墨爾本，澳洲', en:'Melbourne' },
+  { iata:'AKL', name:'奧克蘭機場', city:'奧克蘭，紐西蘭', en:'Auckland' },
+  { iata:'DXB', name:'杜拜國際機場', city:'杜拜，阿聯酋', en:'Dubai' },
+  { iata:'DOH', name:'多哈哈馬德國際機場', city:'多哈，卡達', en:'Doha Hamad' },
+];
+
+let airportSelected = { origin: null, dest: null };
+
+function airportSearch(field, query) {
+  const drop = document.getElementById('drop-' + field);
+  if (airportSelected[field]) return;
+  const q = (query || '').toLowerCase().trim();
+  if (!q) { drop.classList.remove('open'); return; }
+  const results = AIRPORTS.filter(a =>
+    a.iata.toLowerCase().includes(q) ||
+    a.name.toLowerCase().includes(q) ||
+    a.city.toLowerCase().includes(q) ||
+    a.en.toLowerCase().includes(q)
+  ).slice(0, 6);
+  if (results.length === 0) {
+    drop.innerHTML = `<div class="airport-loading">找不到「${query}」相關機場</div>`;
+  } else {
+    drop.innerHTML = results.map(a => `
+      <div class="airport-option" onclick="selectAirport('${field}','${a.iata}','${a.name.replace(/'/g,"\\'")}','${a.city.replace(/'/g,"\\'")}')">
+        <div class="airport-option-iata">${a.iata}</div>
+        <div>
+          <div class="airport-option-name">${a.name}</div>
+          <div class="airport-option-city">${a.city}</div>
+        </div>
+      </div>`).join('');
+  }
+  drop.classList.add('open');
+}
+
+function selectAirport(field, iata, name, city) {
+  airportSelected[field] = iata;
+  document.getElementById('f-' + field + '-text').value = name;
+  document.getElementById('f-' + field).value = iata;
+  document.getElementById('tag-' + field).textContent = iata;
+  document.getElementById('tag-' + field).classList.add('show');
+  document.getElementById('clear-' + field).classList.add('show');
+  document.getElementById('drop-' + field).classList.remove('open');
+}
+
+function clearAirport(field) {
+  airportSelected[field] = null;
+  document.getElementById('f-' + field + '-text').value = '';
+  document.getElementById('f-' + field).value = '';
+  document.getElementById('tag-' + field).classList.remove('show');
+  document.getElementById('clear-' + field).classList.remove('show');
+  document.getElementById('drop-' + field).classList.remove('open');
+  document.getElementById('f-' + field + '-text').focus();
+}
+
+document.addEventListener('click', e => {
+  ['origin','dest'].forEach(field => {
+    const wrap = document.getElementById('wrap-' + field);
+    const drop = document.getElementById('drop-' + field);
+    if (drop && !wrap?.contains(e.target) && !drop.contains(e.target)) {
+      drop.classList.remove('open');
+    }
+  });
+});
+
+// 重置時也清除機場選擇狀態
+const _origReset = resetForm;
+resetForm = function() {
+  _origReset();
+  ['origin','dest'].forEach(field => {
+    airportSelected[field] = null;
+    const txt = document.getElementById('f-' + field + '-text');
+    const tag = document.getElementById('tag-' + field);
+    const clr = document.getElementById('clear-' + field);
+    const drop = document.getElementById('drop-' + field);
+    if (txt) txt.value = '';
+    if (tag) tag.classList.remove('show');
+    if (clr) clr.classList.remove('show');
+    if (drop) drop.classList.remove('open');
+  });
+};
+
+renderRoutes();
+</script>
+</body>
+</html>
