@@ -669,7 +669,7 @@ body {
 <div class="modal-backdrop" id="modal-backdrop" onclick="closeModalOutside(event)">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div class="modal-title">新增追蹤航線</div>
+    <div class="modal-title" id="modal-title">新增追蹤航線</div>
     <div class="trip-type-select">
       <button class="trip-type-btn active" onclick="setTripType('one_way',this)">單程</button>
       <button class="trip-type-btn" onclick="setTripType('round_trip',this)">來回</button>
@@ -725,7 +725,7 @@ body {
       <label class="form-label">目標票價（選填，低於此價格通知）</label>
       <input class="form-input" id="f-threshold" type="number" placeholder="如：15000">
     </div>
-    <button class="submit-btn" onclick="submitRoute()">開始追蹤</button>
+    <button class="submit-btn" id="submit-btn" onclick="submitRoute()">開始追蹤</button>
     <button class="cancel-btn" onclick="closeModal()">取消</button>
   </div>
 </div>
@@ -738,6 +738,7 @@ const MAX_ROUTES = 3;
 let routes = JSON.parse(localStorage.getItem(KEY) || '[]');
 let currentTripType = 'one_way';
 let legCount = 2;
+let editingIndex = null; // null = 新增模式；數字 = 編輯該索引
 let selectedChartIdx = 0;
 let priceChart = null;
 let currentPeriod = '7d';
@@ -1365,15 +1366,78 @@ function switchPeriod(period, btn) {
 }
  
 // ── MODAL ──
-function openModal() {
-  if (routes.length >= MAX_ROUTES) { showToast('已達上限，最多追蹤 3 條航線'); return; }
+function openModal(editIdx = null) {
+  editingIndex = editIdx;
+  // 新增模式才檢查上限；編輯模式不檢查
+  if (editingIndex === null && routes.length >= MAX_ROUTES) {
+    showToast('已達上限，最多追蹤 3 條航線'); return;
+  }
   document.getElementById('modal-backdrop').classList.add('open');
   document.body.style.overflow = 'hidden';
+ 
+  const title = document.getElementById('modal-title');
+  const btn = document.getElementById('submit-btn');
+ 
+  if (editingIndex === null) {
+    title.textContent = '新增追蹤航線';
+    btn.textContent = '開始追蹤';
+    resetForm();
+  } else {
+    title.textContent = '編輯追蹤航線';
+    btn.textContent = '儲存變更';
+    fillForm(routes[editingIndex]);
+  }
+}
+ 
+// 把既有航線資料填進表單
+function fillForm(r) {
   resetForm();
+  const typeBtn = document.querySelector(`.trip-type-btn[onclick*="${r.type}"]`);
+  setTripType(r.type, typeBtn || document.querySelector('.trip-type-btn'));
+ 
+  if (r.type === 'multi_city' && Array.isArray(r.legs)) {
+    legCount = r.legs.length;
+    renderLegs();
+    r.legs.forEach((leg, i) => {
+      const o = document.getElementById(`leg-${i}-origin`);
+      const d = document.getElementById(`leg-${i}-dest`);
+      const f = document.getElementById(`leg-${i}-from`);
+      const t = document.getElementById(`leg-${i}-to`);
+      if (o) o.value = leg.origin || '';
+      if (d) d.value = leg.dest || '';
+      if (f) f.value = (leg.date_range && leg.date_range[0]) || '';
+      if (t) t.value = (leg.date_range && leg.date_range[1]) || '';
+    });
+  } else {
+    // 起訖地：填入機場欄位（顯示代碼，並設定 hidden 值與標籤）
+    if (r.origin) prefillAirport('origin', r.origin);
+    if (r.dest) prefillAirport('dest', r.dest);
+    if (r.depart_range) {
+      document.getElementById('f-depart-from').value = r.depart_range[0] || '';
+      document.getElementById('f-depart-to').value = r.depart_range[1] || '';
+    }
+    if (r.type === 'round_trip' && r.return_range) {
+      document.getElementById('f-return-from').value = r.return_range[0] || '';
+      document.getElementById('f-return-to').value = r.return_range[1] || '';
+    }
+  }
+  document.getElementById('f-threshold').value = r.threshold || '';
+}
+ 
+// 用既有的 IATA 代碼回填機場欄位（從內建清單找完整名稱）
+function prefillAirport(field, iata) {
+  const ap = AIRPORTS.find(a => a.iata === iata);
+  airportSelected[field] = iata;
+  document.getElementById('f-' + field + '-text').value = ap ? ap.name : iata;
+  document.getElementById('f-' + field).value = iata;
+  document.getElementById('tag-' + field).textContent = iata;
+  document.getElementById('tag-' + field).classList.add('show');
+  document.getElementById('clear-' + field).classList.add('show');
 }
 function closeModal() {
   document.getElementById('modal-backdrop').classList.remove('open');
   document.body.style.overflow = '';
+  editingIndex = null;
 }
 function closeModalOutside(e) {
   if (e.target === document.getElementById('modal-backdrop')) closeModal();
@@ -1415,9 +1479,14 @@ function renderLegs() {
 }
  
 function submitRoute() {
-  let nr = { id:Date.now(), type:currentTripType, current_price:0, prev_price:0,
-    history_7d:[], history_14d:[], history_30d:[], last_checked:null,
-    median_range:[11000,14000], median_value:12500 };
+  const isEdit = editingIndex !== null;
+  // 編輯模式保留原本的歷史與價格資料，只更新設定欄位
+  let nr = isEdit
+    ? { ...routes[editingIndex], type: currentTripType }
+    : { id:Date.now(), type:currentTripType, current_price:0, prev_price:0,
+        history_7d:[], history_14d:[], history_30d:[], last_checked:null,
+        median_range:[11000,14000], median_value:12500 };
+ 
   if (currentTripType==='multi_city') {
     nr.legs = Array.from({length:legCount},(_,i)=>({
       origin: document.getElementById(`leg-${i}-origin`)?.value.toUpperCase()||'',
@@ -1426,18 +1495,37 @@ function submitRoute() {
     }));
     nr.origin = nr.legs[0]?.origin||'';
     nr.dest   = nr.legs[nr.legs.length-1]?.dest||'';
+    nr.depart_range = nr.legs[0]?.date_range || null;
+    nr.return_range = null;
   } else {
     nr.origin = document.getElementById('f-origin').value.toUpperCase();
     nr.dest   = document.getElementById('f-dest').value.toUpperCase();
     nr.depart_range = [document.getElementById('f-depart-from').value, document.getElementById('f-depart-to').value];
     nr.return_range = currentTripType==='round_trip'
       ? [document.getElementById('f-return-from').value, document.getElementById('f-return-to').value] : null;
+    nr.legs = null;
   }
   nr.threshold = document.getElementById('f-threshold').value ? parseInt(document.getElementById('f-threshold').value) : null;
   if (!nr.origin || !nr.dest) { showToast('請填寫起訖地'); return; }
-  routes.push(nr);
+ 
+  // 若起訖地有變，舊的歷史資料就不再適用，清掉重新累積
+  if (isEdit) {
+    const old = routes[editingIndex];
+    const routeChanged = old.origin !== nr.origin || old.dest !== nr.dest ||
+      JSON.stringify(old.depart_range) !== JSON.stringify(nr.depart_range) ||
+      JSON.stringify(old.return_range) !== JSON.stringify(nr.return_range);
+    if (routeChanged) {
+      nr.history_7d = []; nr.history_14d = []; nr.history_30d = [];
+      nr.current_price = 0; nr.prev_price = 0; nr.ai_cache = null;
+    }
+    routes[editingIndex] = nr;
+  } else {
+    routes.push(nr);
+  }
+ 
   saveRoutes(); renderRoutes(); closeModal();
-  showToast(`已新增 ${nr.origin} → ${nr.dest}`);
+  showToast(isEdit ? `已更新 ${nr.origin} → ${nr.dest}` : `已新增 ${nr.origin} → ${nr.dest}`);
+  editingIndex = null;
 }
  
 function deleteRoute(idx, e) {
@@ -1450,7 +1538,7 @@ function deleteRoute(idx, e) {
 }
 function editRoute(idx, e) {
   e.stopPropagation();
-  showToast('編輯功能即將推出');
+  openModal(idx);
 }
  
 function saveRoutes() {
